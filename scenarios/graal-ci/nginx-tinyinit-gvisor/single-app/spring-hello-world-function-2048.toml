@@ -1,0 +1,7 @@
+[scenario]
+extends = [
+    "../../nginx-tinyinit-graalhost/single-app/spring-hello-world-function-2048.toml",
+]
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit-gvisor"}

@@ -1,0 +1,13 @@
+[scenario]
+extends = [ 
+    # Loads the specification for the local apps
+    "../../templates/apps-local.toml",
+]
+
+[parameters]
+app_base_dir = "."
+app_binary_path = "http-handler-mn/app/target/http-handler-mn-1.0-SNAPSHOT"
+app_type = {override = "function"}
+app_endpoints = {override = ["/"]}
+app_name = {override = "http-handler-mn"}
+app_command = {override = {eval = "f'{app_base_dir}/{app_binary_path}'"}}

@@ -1,0 +1,17 @@
+[scenario]
+name = "single-app-http-handler-mn-2048"
+extends = [
+    # Load http-handler-mn base
+    "../../vm-benchmarks-bases/app-http-handler-mn.toml",
+    # Loads the specification for the single app load generators
+    "../../../templates/load-generators-single-app-no-outliers.toml",
+]
+description = "Benchmarking of app running in dataplane: http-handler-mn."
+group = "single-app"
+deployment = {eval = "app_deployment"}
+
+[parameters]
+app_nginx_keepalive = {override = 1}
+app_nginx_keepalive_timeout = {override = "2s"}
+app_deployment = {override = "nginx-tinyinit-graalhost"}
+app_memory = {override = 2048}

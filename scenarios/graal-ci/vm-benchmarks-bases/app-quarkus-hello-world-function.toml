@@ -1,0 +1,14 @@
+[scenario]
+extends = [
+    # Loads the specification for the local apps
+    "../../templates/apps-local.toml",
+]
+
+[parameters]
+app_base_dir = "."
+app_binary_path = "quarkus-hello-world-function/app/build/native/nativeCompile/quarkus-hello-world-function"
+app_type = {override = "function"}
+# Calls the fixed Barista Quarkus hello-world resource and returns "Hello, World!".
+app_endpoints = {override = ["/hello"]}
+app_name = {override = "quarkus-hello-world-function"}
+app_command = {override = {eval = "f'{app_base_dir}/{app_binary_path}'"}}

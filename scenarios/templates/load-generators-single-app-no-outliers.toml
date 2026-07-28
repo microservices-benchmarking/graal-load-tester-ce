@@ -1,0 +1,27 @@
+[scenario]
+extends = [
+    # Loads the specification for the single app load generators
+    "load-generators-single-app.toml"
+]
+
+[[scenario.results_processing]]
+name = "cold-start-outlier-filtering"
+code = """
+requests_group = []
+other_group = []
+for result in metric_list:
+    if result.load_generator_type == 'requests':
+        requests_group.append(result)
+    else:
+        other_group.append(result)
+
+requests_group = remove_cold_start_outliers(requests_group, 0.25)
+
+metric_list = requests_group + other_group
+"""
+
+[parameters]
+single_app_latency_start_offset = {override = 5}
+single_app_total_requests = {override = 10}
+single_app_request_interval = {override = 4}
+single_app_request_iteration = {override = 30}

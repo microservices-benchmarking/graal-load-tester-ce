@@ -1,0 +1,31 @@
+[parameters]
+single_app_rate = 20
+single_app_total_requests = 10
+single_app_http_headers = []
+single_app_request_start_offset = 0
+single_app_request_interval = 60
+single_app_request_timeout = 60
+single_app_test_expects_code = 200
+single_app_test_expects_body = ""
+
+[[generators]]
+count = {eval = "NUM_APPS"}
+delay = {eval = "single_app_request_interval * BATCH_IDX + single_app_request_start_offset"}
+http_headers = {eval = "single_app_http_headers"}
+[generators.method]
+type = "requests"
+total_requests = {eval = "single_app_total_requests"}
+timeout = {eval = "single_app_request_timeout"}
+request_timeout = {eval = "single_app_request_timeout"}
+[generators.target]
+policy = "round-robin"
+apps = {eval = "BATCH_IDX"}
+endpoints = 0
+[generator.expects]
+code = {eval = "single_app_test_expects_code"}
+body = {eval = "single_app_test_expects_body"}
+# We collect everything here
+#  - these are test cases that generate minimum data.
+[[generators.metrics]]
+group = "single-appload-generators-test-metrics"
+collect = ["request-time", "request-time-breakdown", "latency-distribution", "latency-distribution-breakdown", "load-tester-success", "request-code-count"]

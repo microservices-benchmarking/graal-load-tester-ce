@@ -1,0 +1,13 @@
+[scenario]
+extends = [
+    # Loads the specification for the {agent_count} agents
+    "../../templates/agents-round-robin.toml",
+    # Loads the specification for the round robin load generators
+    "../../templates/load-generators-round-robin.toml"
+]
+
+[parameters]
+agent_count = {override = 100}
+round_robin_agent_interval = {override = 1}
+round_robin_agent_pre_sleep = {override = 5}
+round_robin_agent_post_sleep = {override = 5}

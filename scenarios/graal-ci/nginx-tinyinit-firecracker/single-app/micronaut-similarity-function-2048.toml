@@ -1,0 +1,7 @@
+[scenario]
+extends = [
+    "../../nginx-tinyinit-graalhost/single-app/micronaut-similarity-function-2048.toml",
+]
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit-firecracker"}

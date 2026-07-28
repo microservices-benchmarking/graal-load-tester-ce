@@ -1,0 +1,15 @@
+[scenario]
+name = "single-app-spring-hello-world-function-2048"
+extends = [
+    # Load spring-hello-world-function base
+    "../../vm-benchmarks-bases/app-spring-hello-world-function.toml",
+    # Loads the specification for the single app load generators
+    "../../../templates/load-generators-single-app.toml",
+]
+description = "Benchmarking of app running in dataplane: spring-hello-world-function."
+group = "single-app"
+deployment = {eval = "app_deployment"}
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit"}
+app_memory = {override = 2048}

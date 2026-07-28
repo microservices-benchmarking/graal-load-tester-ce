@@ -1,0 +1,14 @@
+[scenario]
+extends = [
+    # Loads the specification for the local apps
+    "../../templates/apps-local.toml",
+]
+
+[parameters]
+app_base_dir = "."
+app_binary_path = "micronaut-similarity-function/app/build/native/nativeCompile/micronaut-similarity-function"
+app_type = {override = "function"}
+# Parses two bundled Barista text files and returns their similarity metrics.
+app_endpoints = {override = ["/similarity/smoke-test"]}
+app_name = {override = "micronaut-similarity-function"}
+app_command = {override = {eval = "f'{app_base_dir}/{app_binary_path}'"}}

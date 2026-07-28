@@ -1,0 +1,9 @@
+[scenario]
+extends = [
+    "../../nginx-tinyinit-graalhost/round-robin/micronaut-shopcart-function-256.toml",
+]
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit-firecracker"}
+app_nginx_keepalive_timeout = {override = "600s"}
+round_robin_request_timeout = {override = 60}

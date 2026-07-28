@@ -1,0 +1,8 @@
+[scenario]
+extends = [
+    # Load the nginx-tinyinit scenario
+    "../../nginx-tinyinit/single-app/spring-hello-world-function-2048.toml",
+]
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit-graalhost"}

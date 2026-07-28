@@ -1,0 +1,64 @@
+[parameters]
+agent_count = {eval = "NUM_APPS"}
+
+# A single meminfo agent for getting summary of memory consumption
+[[agent]]
+type = "meminfo"
+app = 0
+count = 1
+# We collect only memory metrics, no breakdown
+[[agent.metrics]]
+group = "agent-meminfo-metrics"
+collect = ["memory"]
+
+# Each app will have attached agent, which will report maximal footprint and its breakdown
+#  - we even out the attached apps through the sample of NUM_APPS
+#  - this way we will have number both for recently-curled apps and lately-curled apps
+[[agent]]
+type = "smaps"
+app = {eval = "int(NUM_APPS / agent_count) * BATCH_IDX"}
+count = {eval = "agent_count"}
+emit = ["max", "breakdown"]
+# We sample the max-pss metrics:
+#  - only the top and bottom 5% of all of the apps
+[[agent.metrics]]
+group = "agent-smaps-max-pss-metrics"
+collect = ["max-pss"]
+[agent.metrics.filter]
+filterby = "quantile-range"
+ranges = "0-5,95-100"
+# We sample the max-pss-breakdown metrics:
+#  - only the top and bottom 5% of all of the apps
+# Further we only keep the rss, pss, pss-* breakdowns and anon-huge-pages
+#  - these are mostly inspected in the breakdowns;
+#  - the full breakdown is still included in the logs.
+[[agent.metrics]]
+group = "agent-smaps-max-pss-breakdown-metrics"
+collect = ["max-pss-breakdown"]
+[agent.metrics.filter]
+filterby = "fields"
+metric.object = ["rss", "pss", "pss-anon", "pss-file", "pss-shmem", "anon-huge-pages"]
+[agent.metrics.filter.filter]
+filterby = "quantile-range"
+groupby = ["metric.object", "app.process-name"]
+ranges = "0-5,95-100"
+
+# Single app will have attached agent, which will report all samples with breakdown
+[[agent]]
+count = 1
+type = "smaps"
+app = 0
+emit = ["samples", "breakdown"]
+# We collected all pss-sample for one app
+[[agent.metrics]]
+group = "agent-smaps-samples-metrics"
+collect = ["pss-sample", "process-count"]
+# We only keep the rss, pss, pss-* breakdowns and anon-huge-pages
+#  - these are mostly inspected in the breakdowns;
+#  - the full breakdown is still included in the logs.
+[[agent.metrics]]
+group = "agent-smaps-samples-breakdown-metrics"
+collect = ["pss-sample-breakdown"]
+[agent.metrics.filter]
+filterby = "fields"
+metric.object = ["rss", "pss", "pss-anon", "pss-file", "pss-shmem", "anon-huge-pages"]

@@ -1,0 +1,14 @@
+[scenario]
+extends = [
+    # Loads the specification for the local apps
+    "../../templates/apps-local.toml",
+]
+
+[parameters]
+app_base_dir = "."
+app_binary_path = "micronaut-shopcart-function/app/build/native/nativeCompile/micronaut-shopcart-function"
+app_type = {override = "function"}
+# Runs a fixed cart flow that adds items and reads the resulting cart.
+app_endpoints = {override = ["/shopcart/smoke-test/"]}
+app_name = {override = "micronaut-shopcart-function"}
+app_command = {override = {eval = "f'{app_base_dir}/{app_binary_path}'"}}

@@ -1,0 +1,22 @@
+[project]
+name = "graal-load-tester-ce"
+version = "1.0.138"
+description = "Local isolation benchmarking harness for microservices workloads"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "toml==0.10.2",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+gos-scenario = "gos_harness.run_scenario:main"
+
+[tool.setuptools.packages.find]
+include = ["gos_harness*"]
+
+[tool.setuptools.package-data]
+gos_harness = ["curl-format.txt"]

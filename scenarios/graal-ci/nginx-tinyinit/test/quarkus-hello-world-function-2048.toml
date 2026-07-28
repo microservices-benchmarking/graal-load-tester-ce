@@ -1,0 +1,16 @@
+[scenario]
+name = "single-app-quarkus-hello-world-function-2048"
+extends = [
+    # Load quarkus-hello-world-function base
+    "../../vm-benchmarks-bases/app-quarkus-hello-world-function.toml",
+    # Loads the specification for the single app load generators
+    "../../../templates/load-generators-single-app-test.toml",
+]
+description = "Benchmarking of app running in dataplane: quarkus-hello-world-function."
+group = "single-app"
+deployment = {eval = "app_deployment"}
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit"}
+app_memory = {override = 2048}
+single_app_test_expects_body = {override = "\"Hello, World!\""}

@@ -1,0 +1,9 @@
+[scenario]
+extends = [
+    # Load the nginx-tinyinit scenario
+    "../../nginx-tinyinit/single-app/micronaut-shopcart-function-2048.toml",
+]
+
+[parameters]
+app_deployment = {override = "nginx-tinyinit-graalhost"}
+app_nginx_keepalive_timeout = {override = "5s"}

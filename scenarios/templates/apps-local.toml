@@ -1,0 +1,44 @@
+[parameters]
+app_port = 8080
+app_memory = 2048
+app_type = "function"
+app_endpoints = ["/"]
+app_name = ""
+app_version = ""
+app_deployment = ""
+app_command = ""
+app_unique_copy = false
+app_environment = "{}"
+app_extra_graalhost_dir_mounts = ""
+app_firecracker_kernel_image = ""
+app_firecracker_mem_mib = 512
+app_firecracker_vcpu_count = 1
+app_firecracker_rootfs_size_mib = 0
+app_count = 1
+app_nginx_keepalive_timeout = "5s"
+app_nginx_keepalive = 5
+app_nginx_keepalive_requests = 10000000
+
+[[apps]]
+port = {eval = "app_port + BATCH_IDX"}
+memory = {eval = "app_memory"}
+type = {eval = "app_type"}
+version = {eval = "app_version"}
+protocol = "http"
+endpoints = {eval = "app_endpoints"}
+name = {eval = "app_name"}
+deployment = {eval = "app_deployment"}
+[apps.binary]
+base_url = "127.0.0.1"
+binary_command = {eval = "app_command"}
+environment = {eval = "app_environment"}
+unique_copy = {eval = "app_unique_copy"}
+extra_graalhost_dir_mounts = {eval = "app_extra_graalhost_dir_mounts"}
+firecracker_kernel_image = {eval = "app_firecracker_kernel_image"}
+firecracker_mem_mib = {eval = "app_firecracker_mem_mib"}
+firecracker_vcpu_count = {eval = "app_firecracker_vcpu_count"}
+firecracker_rootfs_size_mib = {eval = "app_firecracker_rootfs_size_mib"}
+nginx_keepalive = {eval = "app_nginx_keepalive"}
+nginx_keepalive_timeout = {eval = "app_nginx_keepalive_timeout"}
+nginx_keepalive_requests = {eval = "app_nginx_keepalive_requests"}
+count = {eval = "app_count"}

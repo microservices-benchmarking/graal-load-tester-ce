@@ -1,0 +1,107 @@
+[parameters]
+single_app_rate = 20
+single_app_total_requests = 100
+single_app_http_headers = []
+single_app_request_start_offset = 0
+single_app_latency_start_offset = 0
+single_app_latency_duration = 120
+single_app_request_interval = 60
+single_app_request_timeout = 60
+single_app_curl_timeout = 10
+single_app_request_iteration = 1
+single_app_throughput_count = 1         # Execute one 'throughput' load-generator for single-app scenarios.
+single_app_throughput_start_offset = 0  # Delay between the end of the previous batch of load-generators
+                                        # and the start of the 'throughput' batch of load-generators.
+single_app_throughput_duration = 120    # The execution duration of a 'throughput' load-generator.
+single_app_request_persistent = false
+single_app_latency_generators_count = 1
+
+[[generators]]
+count = {eval = "NUM_APPS * single_app_request_iteration"}
+delay = {eval = "single_app_request_interval * BATCH_IDX + single_app_request_start_offset"}
+http_headers = {eval = "single_app_http_headers"}
+[generators.method]
+type = "requests"
+total_requests = {eval = "single_app_total_requests"}
+persistent_requests = {eval = "single_app_request_persistent"}
+timeout = {eval = "single_app_request_timeout"}
+request_timeout = {eval = "single_app_curl_timeout"}
+[generators.target]
+policy = "round-robin"
+apps = {eval = "BATCH_IDX % NUM_APPS"}
+endpoints = 0
+# We keep only the top 10% of the request-times
+#  - these requests are only inspected in the breakdown queries;
+#  - we are usually interested in the cold starts (which will be included) and spikes;
+#  - for the rest we will get enough samples (of warm starts).
+[[generators.metrics]]
+group = "single-app-requests-metrics"
+collect = ["request-time"]
+[generators.metrics.filter]
+filterby = "quantile-range"
+groupby = ['metric.object']
+ranges = "90-100"
+# We keep only the top 10% of the common request-time-breakdowns
+[[generators.metrics]]
+collect = ["request-time-breakdown"]
+group = "single-app-requests-breakdown-metrics"
+[generators.metrics.filter]
+filterby = "fields"
+metric.object = ["namelookup", "pretransfer-time", "connect-time", "appconnect-time", "node-time", "response-time"]
+[generators.metrics.filter.filter]
+filterby = "quantile-range"
+groupby = ['metric.object']
+ranges = "90-100"
+# We fully collect the cold-start-related breakdown
+#  - these should be minimum of points.
+[[generators.metrics]]
+group = "single-app-requests-cold-start-breakdown-metrics"
+collect = ["request-time-breakdown"]
+fail_on_no_metrics = false
+[generators.metrics.filter]
+filterby = "fields"
+metric.object = ["nginx-time", "tinyinit-time", "tinyinit-activation-time", "tinyinit-fork-time", "app-cold-start-time", "app-post-cold-start-time", "network-time"]
+# We collect whole distribution, and all successes
+[[generators.metrics]]
+group = "single-app-requests-summary-metrics"
+collect = ["latency-distribution", "load-tester-success", "request-code-count"]
+# We limit the breakdown of distribution only to node and network time
+#  - the full breakdown is in the logs.
+[[generators.metrics]]
+group = "single-app-requests-latency-distribution-breakdown-metrics"
+collect = ["latency-distribution-breakdown"]
+fail_on_no_metrics = false
+[generators.metrics.filter]
+filterby = "fields"
+metric.object = ["node-time", "network-time"]
+
+[[generators]]
+count = {eval = "single_app_latency_generators_count"}
+delay = {eval = "NUM_APPS * single_app_request_interval * single_app_request_iteration + single_app_request_start_offset + single_app_latency_start_offset"}
+target = {eval = "f'{{{BATCH_IDX}}}/{{{0}}}'"}
+http_headers = {eval = "single_app_http_headers"}
+[generators.method]
+type = "latency"
+connections = 2
+threads = 2
+rate = {eval = "single_app_rate"}
+duration = {eval = "single_app_latency_duration"}
+# For latency generators we collect everything
+[[generators.metrics]]
+group = "single-app-latency-metrics"
+collect = ["latency-distribution", "latency-distribution-breakdown", "load-tester-success", "request-code-count"]
+
+[[generators]]
+count = {eval = "single_app_throughput_count"}
+delay = {eval = "single_app_request_start_offset + NUM_APPS * single_app_request_interval * single_app_request_iteration + single_app_latency_start_offset + single_app_latency_duration + single_app_throughput_start_offset"}
+target = {eval = "f'{{{BATCH_IDX}}}/{{{0}}}'"}
+http_headers = {eval = "single_app_http_headers"}
+[generators.method]
+type = "throughput"
+connections = 1
+threads = 1
+duration = {eval = "single_app_throughput_duration"}
+# For throughput generators we collect everything
+[[generators.metrics]]
+group = "single-app-throughput-metrics"
+collect = ["throughput", "load-tester-success", "request-code-count"]

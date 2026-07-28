@@ -1,0 +1,14 @@
+[scenario]
+extends = [
+    # Loads the specification for the local apps
+    "../../templates/apps-local.toml",
+]
+
+[parameters]
+app_base_dir = "."
+app_binary_path = "spring-petclinic-function/app/build/native/nativeCompile/spring-petclinic-function"
+app_type = {override = "function"}
+# Runs a fixed PetClinic owner, pet, visit, owner-edit, and pet-edit flow.
+app_endpoints = {override = ["/petclinic/smoke-test"]}
+app_name = {override = "spring-petclinic-function"}
+app_command = {override = {eval = "f'{app_base_dir}/{app_binary_path}'"}}

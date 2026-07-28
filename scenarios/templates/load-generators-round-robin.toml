@@ -1,0 +1,43 @@
+[parameters]
+round_robin_agent_interval = 0
+round_robin_agent_pre_sleep = 0
+round_robin_agent_post_sleep = 0
+round_robin_http_headers = []
+round_robin_request_timeout = 10
+round_robin_rounds = 10
+
+[[generators]]
+count = 1
+delay = 0
+agents = {eval = "ALL"}
+http_headers = {eval = "round_robin_http_headers"}
+[generators.method]
+type = "requests"
+total_requests = {eval = "NUM_APPS * round_robin_rounds"}
+timeout = {eval = "NUM_APPS * round_robin_rounds"}
+request_timeout = {eval = "round_robin_request_timeout"}
+[generators.target]
+pre_begin_sleep = {eval = "round_robin_agent_pre_sleep"}
+between_rounds_sleep = {eval = "round_robin_agent_interval"}
+agent_emit_interval_during_sleep = {eval = "round_robin_agent_interval"}
+post_end_sleep = {eval = "round_robin_agent_post_sleep"}
+policy = "round-robin"
+apps = {eval = "ALL"}
+endpoints = 0
+# We collect the whole latency-distribution for all requests
+[[generators.metrics]]
+group = "round-robin-requests-latency-distribution-metrics"
+collect = ["latency-distribution", "latency-distribution-breakdown", "load-tester-success", "request-code-count"]
+# We sample the individual request times:
+#  - these are mostly inspected in the breakdown;
+#  - every 10th request is enough to see the shape of the experiment
+#    - there should be an initial slope when apps are not alive:
+#    - followed by step-down when apps are kept alive.
+#  - full data are available in the logs
+[[generators.metrics]]
+group = "round-robin-requests-metrics"
+collect = ["request-time"]
+[generators.metrics.sampler]
+domain = "discrete"
+sampleby = "metric.iteration"
+rate = 10

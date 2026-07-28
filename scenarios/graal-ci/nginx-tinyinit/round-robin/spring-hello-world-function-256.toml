@@ -1,0 +1,17 @@
+[scenario]
+extends = [
+    # Load spring-hello-world-function base
+    "../../vm-benchmarks-bases/app-spring-hello-world-function.toml",
+    # Load round robin specification
+    "../../vm-benchmarks-bases/round-robin.toml",
+]
+name = "round-robin-spring-hello-world-function-256"
+description = "Round robin generator that will ping all apps multiple times and collects memory. Generates about 56 * NUM_APPS data points (20 * NUM_APPS for requests, 16 * NUM_APPS for latencies, 20 * 4 * NUM_APPS / 4 for memory)."
+group = "round-robin"
+deployment = {eval = "app_deployment"}
+
+[parameters]
+app_nginx_keepalive_timeout = {override = "20s"}
+app_deployment = {override = "nginx-tinyinit"}
+app_memory = {override = 256}
+app_count = {override = 100}
