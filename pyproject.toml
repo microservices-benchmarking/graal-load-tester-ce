@@ -3,7 +3,7 @@ name = "graal-load-tester-ce"
 version = "1.0.138"
 description = "Local isolation benchmarking harness for microservices workloads"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "toml==0.10.2",
 ]

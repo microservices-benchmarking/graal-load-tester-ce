@@ -35,6 +35,27 @@ dataplane = dataplane_config.get_config()
 MAX_KEG_LIST_RETRIES: int = 30
 
 
+def _nginx_environment() -> dict[str, str]:
+    """Return an environment that exposes a repository-local nginx library directory."""
+    env = os.environ.copy()
+    nginx_executable = shutil.which("nginx")
+    if nginx_executable is None:
+        return env
+
+    library_dir = Path(nginx_executable).resolve().parent
+    if (library_dir / "libpcre.so.3").is_file():
+        current_library_path = env.get("LD_LIBRARY_PATH")
+        env["LD_LIBRARY_PATH"] = str(library_dir)
+        if current_library_path:
+            env["LD_LIBRARY_PATH"] += os.pathsep + current_library_path
+    return env
+
+
+def _gvisor_command(binary_command: str) -> str:
+    platform = " --platform=kvm" if os.environ.get("GRAAL_LOAD_TESTER_WSL") == "true" else ""
+    return f"runsc{platform} --rootless --network=host do {binary_command}"
+
+
 class KegDeploymentException(Exception):
     """Fired when anything bad happens during the keg initialization"""
     def __init__(self, message: str):
@@ -49,7 +70,7 @@ def stop_nginx(app_tmp_dir: str) -> None:
     nginx_prefix = os.path.join(app_tmp_dir, "nginx")
     nginx_config_file = f"{nginx_prefix}.conf"
     cmd = ["nginx", "-p", nginx_prefix, "-c", nginx_config_file, "-s", "stop"]
-    process = Popen(cmd)
+    process = Popen(cmd, env=_nginx_environment())
     # Wait for the process to finish
     process.communicate()
 
@@ -189,7 +210,7 @@ def run_local_binary_on_nginx_tinyinit(
         graalhost_config_file = local_configs.build_graalhost_config(app_tmp_dir, config.binary)
         command = f'graalhost --enable_resolving_env_refs --run_config=@{graalhost_config_file} --log_to=syslog --run {binary_command}'
     elif config.deployment == "nginx-tinyinit-gvisor":
-        command = f'runsc --rootless --network=host do {binary_command}'
+        command = _gvisor_command(binary_command)
     elif config.deployment == "nginx-tinyinit-firecracker":
         bundle_script = str(Path(__file__).parent.parent / "scripts" / "firecracker" / "make-firecracker-bundle.sh")
         bundle_dir = str(Path(app_tmp_dir) / "firecracker")
@@ -235,7 +256,7 @@ def run_local_binary_on_nginx_tinyinit(
 
     # 5. Start nginx
     nginx_cmd: list[str] = ["nginx", "-p", nginx_prefix, "-c", nginx_config_file]
-    subprocess.Popen(nginx_cmd, stderr=nginx_log_file)
+    subprocess.Popen(nginx_cmd, env=_nginx_environment(), stderr=nginx_log_file)
     poll_file(nginx_pid_file, 100)
 
     # 6. Set up cleanup functions

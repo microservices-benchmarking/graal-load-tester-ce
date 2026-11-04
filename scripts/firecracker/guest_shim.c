@@ -268,38 +268,29 @@ static int create_vsock_listener(uint16_t port) {
 }
 
 static pid_t spawn_child(const char *app_path, int *child_stdin, int *child_stdout) {
-    int stdin_pipe[2];
-    int stdout_pipe[2];
-    if (pipe(stdin_pipe) < 0) {
-        die("pipe(stdin)");
-    }
-    if (pipe(stdout_pipe) < 0) {
-        close(stdin_pipe[0]);
-        close(stdin_pipe[1]);
-        die("pipe(stdout)");
+    int app_socket[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, app_socket) < 0) {
+        die("socketpair(app)");
     }
 
     pid_t child = fork();
     if (child < 0) {
-        close(stdin_pipe[0]);
-        close(stdin_pipe[1]);
-        close(stdout_pipe[0]);
-        close(stdout_pipe[1]);
+        close(app_socket[0]);
+        close(app_socket[1]);
         die("fork");
     }
 
     if (child == 0) {
-        if (dup2(stdin_pipe[0], STDIN_FILENO) < 0) {
+        // Match tinyinit's contract: stdin and stdout share one bidirectional socket.
+        if (dup2(app_socket[1], STDIN_FILENO) < 0) {
             die("dup2(stdin)");
         }
-        if (dup2(stdout_pipe[1], STDOUT_FILENO) < 0) {
+        if (dup2(app_socket[1], STDOUT_FILENO) < 0) {
             die("dup2(stdout)");
         }
 
-        close(stdin_pipe[0]);
-        close(stdin_pipe[1]);
-        close(stdout_pipe[0]);
-        close(stdout_pipe[1]);
+        close(app_socket[0]);
+        close(app_socket[1]);
 
         struct timespec ts;
         if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
@@ -314,10 +305,13 @@ static pid_t spawn_child(const char *app_path, int *child_stdin, int *child_stdo
         die("execv(app)");
     }
 
-    close(stdin_pipe[0]);
-    close(stdout_pipe[1]);
-    *child_stdin = stdin_pipe[1];
-    *child_stdout = stdout_pipe[0];
+    close(app_socket[1]);
+    *child_stdin = app_socket[0];
+    *child_stdout = dup(app_socket[0]);
+    if (*child_stdout < 0) {
+        close(app_socket[0]);
+        die("dup(app socket)");
+    }
     return child;
 }
 
@@ -365,6 +359,7 @@ static int pump_between(int conn_fd, int child_stdin, int child_stdout) {
                 } else if (n == 0) {
                     conn_open = false;
                     if (child_stdin_open) {
+                        shutdown(child_stdin, SHUT_WR);
                         close(child_stdin);
                         child_stdin_open = false;
                     }
@@ -376,6 +371,7 @@ static int pump_between(int conn_fd, int child_stdin, int child_stdout) {
             } else if ((revents & (POLLHUP | POLLERR | POLLNVAL)) != 0) {
                 conn_open = false;
                 if (child_stdin_open) {
+                    shutdown(child_stdin, SHUT_WR);
                     close(child_stdin);
                     child_stdin_open = false;
                 }
@@ -408,6 +404,7 @@ static int pump_between(int conn_fd, int child_stdin, int child_stdout) {
     }
 
     if (child_stdin_open) {
+        shutdown(child_stdin, SHUT_WR);
         close(child_stdin);
     }
     return 0;
