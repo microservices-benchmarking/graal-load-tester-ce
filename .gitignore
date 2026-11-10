@@ -33,3 +33,18 @@ MANIFEST
 
 .DS_Store
 results/
+/bin/curl
+/bin/nginx
+/bin/libpcre.so.3
+/bin/graalvm/*
+!/bin/graalvm/.gitkeep
+/bin/graalhost/*
+!/bin/graalhost/.gitkeep
+/bin/gvisor/*
+!/bin/gvisor/.gitkeep
+/bin/firecracker/*
+!/bin/firecracker/.gitkeep
+workloads/graalos/
+workloads/native/
+/workloads/src/**/.gradle/
+/workloads/src/**/target/

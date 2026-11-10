@@ -1,0 +1,40 @@
+plugins {
+    id("application")
+    id 'org.graalvm.buildtools.native' version '0.10.2'
+}
+
+version = "0.1"
+group = "com.oracle.graalos"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.athaydes.rawhttp:rawhttp-cookies:0.2.1")
+    implementation("com.athaydes.rawhttp:rawhttp-core:2.4.1")
+    implementation("jakarta.persistence:jakarta.persistence-api:3.1.0")
+    implementation("jakarta.validation:jakarta.validation-api:3.0.2")
+    implementation("org.springframework:spring-core:6.0.6")
+    implementation("org.springframework:spring-context:6.0.6")
+}
+
+application {
+    mainClass.set("org.springframework.samples.petclinic.function.SpringPetclinicFunction")
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+graalvmNative.toolchainDetection = false
+
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "aot-graalos") {
+  graalvmNative.binaries.main.buildArgs.addAll("-H:+UnlockExperimentalVMOptions", "-H:+GraalOS")
+}
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "nib") {
+  graalvmNative.binaries.main.buildArgs.addAll(
+    "--bundle-create=${project.buildDir}/spring-petclinic-function-${project.version}.nib,dry-run"
+  )
+}

@@ -1,0 +1,68 @@
+plugins {
+    id("io.micronaut.application") version "4.2.1"
+    id("io.micronaut.aot") version "4.2.1"
+}
+
+version = "0.1"
+group = "com.oracle.graalos"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    implementation("io.micronaut:micronaut-http-client")
+    implementation("io.micronaut:micronaut-runtime")
+    implementation("io.micronaut.cache:micronaut-cache-core")
+    implementation("io.micronaut.cache:micronaut-cache-caffeine")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation("jakarta.validation:jakarta.validation-api")
+    runtimeOnly("ch.qos.logback:logback-classic")
+}
+
+application {
+    mainClass.set("micronaut.benchmark.shopcart.Application")
+}
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+graalvmNative.toolchainDetection = false
+
+micronaut {
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("micronaut.benchmark.shopcart.*")
+    }
+}
+
+graalvmNative.binaries.main.buildArgs.addAll(
+    "--initialize-at-build-time=io.micronaut.serde.config.annotation.SerdeConfig\$SerSubtyped\$DiscriminatorValueKind",
+    "--initialize-at-build-time=io.micronaut.core.convert.ConversionContext,io.micronaut.core.convert.ImmutableArgumentConversionContext",
+    "--initialize-at-build-time=io.micronaut.context.ApplicationContextConfigurer\$1",
+    "--initialize-at-run-time=io.netty.channel.unix.Errors",
+    "--initialize-at-run-time=io.netty.channel.unix.IovArray",
+    "--initialize-at-run-time=io.netty.channel.unix.Limits",
+    "--initialize-at-run-time=io.netty.buffer",
+    "--initialize-at-run-time=io.netty.channel",
+    "--initialize-at-run-time=io.netty.handler",
+    "--initialize-at-run-time=io.netty.resolver",
+    "--initialize-at-run-time=io.netty.util",
+    "--initialize-at-run-time=io.netty.bootstrap",
+    "-H:+ReportExceptionStackTraces"
+)
+
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "aot-graalos") {
+  graalvmNative.binaries.main.buildArgs.addAll("-H:+UnlockExperimentalVMOptions", "-H:+GraalOS")
+}
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "nib") {
+  graalvmNative.binaries.main.buildArgs.addAll(
+    "--bundle-create=${project.buildDir}/micronaut-shopcart-function-${project.version}.nib,dry-run"
+  )
+}

@@ -1,0 +1,37 @@
+plugins {
+    id("application")
+    id 'org.graalvm.buildtools.native' version '0.10.2'
+}
+
+version = "0.1"
+group = "com.oracle.graalos"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.athaydes.rawhttp:rawhttp-cookies:0.2.1")
+    implementation("com.athaydes.rawhttp:rawhttp-core:2.4.1")
+    implementation("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
+}
+
+application {
+    mainClass.set("org.acme.getting.started.QuarkusHelloWorldFunction")
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+graalvmNative.toolchainDetection = false
+
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "aot-graalos") {
+  graalvmNative.binaries.main.buildArgs.addAll("-H:+UnlockExperimentalVMOptions", "-H:+GraalOS")
+}
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "nib") {
+  graalvmNative.binaries.main.buildArgs.addAll(
+    "--bundle-create=${project.buildDir}/quarkus-hello-world-function-${project.version}.nib,dry-run"
+  )
+}

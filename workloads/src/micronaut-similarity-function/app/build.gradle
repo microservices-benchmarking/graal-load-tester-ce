@@ -1,0 +1,56 @@
+plugins {
+    id("io.micronaut.application") version "4.2.1"
+    id("io.micronaut.aot") version "4.2.1"
+}
+
+version = "0.1"
+group = "com.oracle.graalos"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    implementation("io.micronaut:micronaut-http-client")
+    implementation("io.micronaut:micronaut-jackson-databind")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation("info.debatty:java-string-similarity:2.0.0")
+    implementation("net.jcip:jcip-annotations:1.0")
+    runtimeOnly("ch.qos.logback:logback-classic")
+}
+
+application {
+    mainClass.set("com.example.Application")
+}
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+graalvmNative.toolchainDetection = false
+
+micronaut {
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("com.example.*")
+    }
+}
+
+graalvmNative.binaries.main.buildArgs.addAll(
+    "--initialize-at-run-time=io.netty",
+    "--initialize-at-build-time=io.micronaut.core.convert.ConversionContext,io.micronaut.core.convert.ImmutableArgumentConversionContext"
+)
+
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "aot-graalos") {
+  graalvmNative.binaries.main.buildArgs.addAll("-H:+UnlockExperimentalVMOptions", "-H:+GraalOS")
+}
+if (hasProperty("buildProfile") && getProperty("buildProfile") == "nib") {
+  graalvmNative.binaries.main.buildArgs.addAll(
+    "--bundle-create=${project.buildDir}/micronaut-similarity-function-${project.version}.nib,dry-run"
+  )
+}
