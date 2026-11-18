@@ -12,5 +12,6 @@ deployment = {eval = "app_deployment"}
 
 [parameters]
 app_deployment = {override = "nginx-tinyinit-graalhost"}
+app_extra_graalhost_args = {override = "--seccomp=none --log_level err --disable_core_scheduling"}
 app_memory = {override = 2048}
 single_app_test_expects_body = {override = "\"visits_count=1\""}

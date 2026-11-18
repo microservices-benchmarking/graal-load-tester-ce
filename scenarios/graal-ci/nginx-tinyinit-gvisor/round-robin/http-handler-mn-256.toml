@@ -5,4 +5,5 @@ extends = [
 
 [parameters]
 app_deployment = {override = "nginx-tinyinit-gvisor"}
+app_extra_graalhost_args = {override = ""}
 app_nginx_keepalive_timeout = {override = "120s"}
