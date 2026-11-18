@@ -208,7 +208,15 @@ def run_local_binary_on_nginx_tinyinit(
         command = binary_command
     elif config.deployment == "nginx-tinyinit-graalhost":
         graalhost_config_file = local_configs.build_graalhost_config(app_tmp_dir, config.binary)
-        command = f'graalhost --enable_resolving_env_refs --run_config=@{graalhost_config_file} --log_to=syslog --run {binary_command}'
+        command = shlex.join([
+            "graalhost",
+            f"--run_config=@{graalhost_config_file}",
+            "--log_to=syslog",
+            *config.binary.extra_graalhost_args,
+            "--run",
+            *binary_command_parts,
+        ])
+        logging.log(f" - GraalHost command: {command}")
     elif config.deployment == "nginx-tinyinit-gvisor":
         command = _gvisor_command(binary_command)
     elif config.deployment == "nginx-tinyinit-firecracker":
@@ -246,7 +254,7 @@ def run_local_binary_on_nginx_tinyinit(
 
     # 4. Start tinyinit
     env = os.environ.copy()
-    env["RUST_LOG"] = "trace"
+    env["TINYINIT_LOG"] = "error"
     # --no-syslog: by default, tinyinit logs to syslog, for which not every machine have permissions (e.g. in the CI); this option disables the logging.
     tinyinit_cmd: list[str] = ["tinyinit", "--no-syslog", "--no-block-signal", "--conf-d-path", tinyinit_config_dir]
     tiny_process = subprocess.Popen(tinyinit_cmd, env=env, stderr=tinyinit_log_file)

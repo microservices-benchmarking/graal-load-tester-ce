@@ -5,3 +5,4 @@ extends = [
 
 [parameters]
 app_deployment = {override = "nginx-tinyinit-firecracker"}
+app_extra_graalhost_args = {override = ""}

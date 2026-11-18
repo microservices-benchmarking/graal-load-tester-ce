@@ -11,7 +11,8 @@ group = "single-app"
 deployment = {eval = "app_deployment"}
 
 [parameters]
-app_nginx_keepalive = {override = 1}
+app_nginx_keepalive = {override = 2}
 app_nginx_keepalive_timeout = {override = "2s"}
 app_deployment = {override = "nginx-tinyinit-graalhost"}
+app_extra_graalhost_args = {override = "--seccomp=none --log_level err --disable_core_scheduling"}
 app_memory = {override = 2048}

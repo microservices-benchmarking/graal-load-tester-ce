@@ -6,4 +6,5 @@ extends = [
 
 [parameters]
 app_deployment = {override = "nginx-tinyinit-graalhost"}
+app_extra_graalhost_args = {override = "--seccomp=none --log_level err --disable_core_scheduling"}
 app_nginx_keepalive_timeout = {override = "20s"}

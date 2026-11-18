@@ -9,6 +9,7 @@ app_deployment = ""
 app_command = ""
 app_unique_copy = false
 app_environment = "{}"
+app_extra_graalhost_args = ""
 app_extra_graalhost_dir_mounts = ""
 app_firecracker_kernel_image = ""
 app_firecracker_mem_mib = 512
@@ -33,6 +34,7 @@ base_url = "127.0.0.1"
 binary_command = {eval = "app_command"}
 environment = {eval = "app_environment"}
 unique_copy = {eval = "app_unique_copy"}
+extra_graalhost_args = {eval = "app_extra_graalhost_args"}
 extra_graalhost_dir_mounts = {eval = "app_extra_graalhost_dir_mounts"}
 firecracker_kernel_image = {eval = "app_firecracker_kernel_image"}
 firecracker_mem_mib = {eval = "app_firecracker_mem_mib"}

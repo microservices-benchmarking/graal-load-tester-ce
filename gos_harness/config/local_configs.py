@@ -97,6 +97,8 @@ GRAALHOST_CONFIG_TEMPLATE: Template = Template("""
   "env": ${env_vars},
   "testing_default_mappings":true,
   "working_dir": "/",
+  "dcq_epoller_spin_budget": 100,
+  "memlimit": 64.0,
   "fd_limit": 4096,
   "ep": "21478959648604160"
 }
