@@ -26,14 +26,36 @@ DEPLOYMENTS = {
     "nginx-tinyinit-gvisor": "gVisor",
     "nginx-tinyinit-firecracker": "Firecracker",
 }
+VISORS = {
+    "process": "nginx-tinyinit",
+    "graalvisor": "nginx-tinyinit-graalhost",
+    "gvisor": "nginx-tinyinit-gvisor",
+    "firecracker": "nginx-tinyinit-firecracker",
+}
 TABLES = ("cold-start", "memory", "throughput")
 DEFAULT_REPETITIONS = 3
+RUNTIMES = (
+    ("GraalHost", "graalhost"),
+    ("gVisor", "runsc"),
+    ("Firecracker", "firecracker"),
+)
 MEMORY_AGENT_SCRIPTS = (
     ROOT / "scripts/agents/global_agent_meminfo.sh",
     ROOT / "scripts/agents/pid_agent_smaps.sh",
 )
 CellKey = tuple[str, str, str]
 RepeatedCellKey = tuple[int, str, str, str]
+
+
+def print_runtime_versions() -> None:
+    """Print each isolation runtime's unmodified version output."""
+    print("==> Runtime versions", flush=True)
+    for runtime, command in RUNTIMES:
+        print(f"{runtime} ({command} --version):", flush=True)
+        subprocess.run([command, "--version"], check=True)
+        if command == "graalhost":
+            print("GraalHost build configuration (graalhost --build_config):", flush=True)
+            subprocess.run([command, "--build_config"], check=True)
 
 
 def benchmark_groups(selected: set[str]) -> list[tuple[str, str]]:
@@ -183,6 +205,7 @@ def render_table(
     table: str,
     output: Path,
     repetitions: int,
+    workloads: tuple[str, ...],
     failures: dict[RepeatedCellKey, str] | None = None,
 ) -> str:
     """Render one Markdown result table.
@@ -191,6 +214,7 @@ def render_table(
         table: Table to render.
         output: Root directory containing benchmark results.
         repetitions: Number of benchmark repetitions to aggregate.
+        workloads: Workloads selected for the table.
         failures: Matrix cells that failed during the current run.
     """
     titles = {
@@ -213,7 +237,7 @@ def render_table(
         f"| Workload | {' | '.join(columns)} |",
         f"| --- | {' | '.join(['---:'] * len(columns))} |",
     ]
-    for workload in WORKLOADS:
+    for workload in workloads:
         values_by_deployment: dict[str, float | None] = {}
         failed_deployments = set()
         for deployment in DEPLOYMENTS:
@@ -258,6 +282,8 @@ def render_table(
 def run_matrix(
     output: Path,
     selected: set[str],
+    deployments: tuple[str, ...],
+    workloads: tuple[str, ...],
     kernel: Path | None,
     dry_run: bool,
 ) -> dict[CellKey, str]:
@@ -266,14 +292,16 @@ def run_matrix(
     Args:
         output: Root directory for benchmark results.
         selected: Table names requested for the run.
+        deployments: Scenario deployments selected for the run.
+        workloads: Workloads selected for the run.
         kernel: Firecracker guest-kernel path.
         dry_run: Print commands without executing them.
     """
     failures = {}
-    # Expand each requested scenario group across every deployment and workload.
+    # Expand each requested scenario group across selected deployments and workloads.
     for group, memory in benchmark_groups(selected):
-        for deployment in DEPLOYMENTS:
-            for workload in WORKLOADS:
+        for deployment in deployments:
+            for workload in workloads:
                 scenario = scenario_path(deployment, group, workload, memory)
                 run_dir = output / group / deployment / workload
                 binary = workload_path(deployment, workload)
@@ -309,11 +337,15 @@ def run_matrix(
     return failures
 
 
-def input_errors(selected: set[str]) -> list[str]:
+def input_errors(
+    selected: set[str], deployments: tuple[str, ...], workloads: tuple[str, ...]
+) -> list[str]:
     """Collect missing scripts, scenarios, and workload executables.
 
     Args:
         selected: Table names requested for the run.
+        deployments: Scenario deployments selected for the run.
+        workloads: Workloads selected for the run.
     """
     errors = set()
     # Memory runs depend on both host-side sampling agents.
@@ -323,8 +355,8 @@ def input_errors(selected: set[str]) -> list[str]:
                 errors.add(f"missing executable memory agent: {agent_script}")
     # Every selected cell needs its scenario and role-specific workload image.
     for group, memory in benchmark_groups(selected):
-        for deployment in DEPLOYMENTS:
-            for workload in WORKLOADS:
+        for deployment in deployments:
+            for workload in workloads:
                 scenario = scenario_path(deployment, group, workload, memory)
                 if not scenario.is_file():
                     errors.add(f"missing scenario: {scenario}")
@@ -338,6 +370,8 @@ def main() -> int:
     """Parse the requested run and generate its benchmark tables."""
     parser = argparse.ArgumentParser(description="Run the GraalVisor blog benchmark matrix.")
     parser.add_argument("--table", choices=("all",) + TABLES, default="all")
+    parser.add_argument("--visor", choices=("all", *VISORS), default="all")
+    parser.add_argument("--workload", choices=("all", *WORKLOADS), default="all")
     parser.add_argument("--kernel", type=Path, default=os.environ.get("FIRECRACKER_KERNEL"))
     parser.add_argument("--output-dir", type=Path, default=ROOT / "results/blog")
     parser.add_argument("--repetitions", type=int, default=DEFAULT_REPETITIONS)
@@ -350,13 +384,21 @@ def main() -> int:
     # Resolve the selected tables and reject missing shared inputs before the
     # multi-hour matrix starts.
     selected = set(TABLES) if args.table == "all" else {args.table}
+    deployments = tuple(DEPLOYMENTS) if args.visor == "all" else (VISORS[args.visor],)
+    workloads = WORKLOADS if args.workload == "all" else (args.workload,)
     kernel = args.kernel.resolve() if args.kernel else None
-    if not args.tables_only and (kernel is None or not kernel.is_file()):
+    if (
+        not args.tables_only
+        and "nginx-tinyinit-firecracker" in deployments
+        and (kernel is None or not kernel.is_file())
+    ):
         parser.error("pass --kernel VMLINUX or set FIRECRACKER_KERNEL")
     if not args.tables_only:
-        errors = input_errors(selected)
+        errors = input_errors(selected, deployments, workloads)
         if errors:
             parser.error("benchmark inputs are not ready:\n  - " + "\n  - ".join(errors))
+    if not args.tables_only and not args.dry_run:
+        print_runtime_versions()
 
     # Run the selected cells unless existing results are being rendered only.
     output = args.output_dir.resolve()
@@ -365,7 +407,12 @@ def main() -> int:
         for repetition in range(1, args.repetitions + 1):
             print(f"==> Benchmark run {repetition}/{args.repetitions}", flush=True)
             repeated_failures = run_matrix(
-                output / f"run-{repetition}", selected, kernel, args.dry_run
+                output / f"run-{repetition}",
+                selected,
+                deployments,
+                workloads,
+                kernel,
+                args.dry_run,
             )
             for cell, error in repeated_failures.items():
                 failures[(repetition, *cell)] = error
@@ -374,7 +421,7 @@ def main() -> int:
 
     # Consolidate the retained results into the requested Markdown tables.
     markdown = "\n\n".join(
-        render_table(table, output, args.repetitions, failures)
+        render_table(table, output, args.repetitions, workloads, failures)
         for table in TABLES
         if table in selected
     ) + "\n"

@@ -161,8 +161,9 @@ the arithmetic mean of each cell's per-run value:
 
 Restrict execution and output to one table with `--table memory`,
 `--table throughput`, or `--table cold-start`. Change the number of complete
-matrix runs with `--repetitions N`. Use `--tables-only` with the same
-repetition count to regenerate `results/blog/tables.md` from existing results.
+matrix runs with `--repetitions N`. Select one workload with
+`--workload WORKLOAD`. Use `--tables-only` with the same repetition count to
+regenerate `results/blog/tables.md` from existing results.
 
 ### Running individual experiments
 

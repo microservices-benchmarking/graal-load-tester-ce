@@ -6,6 +6,7 @@ import re
 import toml
 import json
 import os
+import shlex
 import sys
 import math
 from collections.abc import Mapping
@@ -18,6 +19,7 @@ from gos_harness import gos_logging as logging
 from gos_harness.config import graalos_config as runtime_graalos_config
 
 EXTRA_GRAALHOST_DIR_MOUNTS = "extra_graalhost_dir_mounts"
+EXTRA_GRAALHOST_ARGS = "extra_graalhost_args"
 GRAALHOST_CONFIG_FILE = "graalhost_config_file"
 FIRECRACKER_KERNEL_IMAGE = "firecracker_kernel_image"
 FIRECRACKER_MEM_MIB = "firecracker_mem_mib"
@@ -419,6 +421,7 @@ class LocalBinaryConfig(BinaryConfig):
     :ivar _nginx_keepalive: number of connections that are kept alive by nginx
     :ivar _nginx_keepalive_requests: number of requests kept on one nginx upstream connection
     :ivar _nginx_keepalive_timeout: timeout of keeping the connections alive by nginx; can be supplied as string such as "2s"
+    :ivar _extra_graalhost_args: additional arguments passed to graalhost
     :ivar _extra_graalhost_dir_mounts: list of directories to be mounted on graalhost
     :ivar _graalhost_config_file: the path of the config file to use for graalhost. Cannot be combined with a non-empty _extra_graalhost_dir_mounts
     :ivar _firecracker_kernel_image: path to Firecracker guest kernel image
@@ -441,6 +444,7 @@ class LocalBinaryConfig(BinaryConfig):
         firecracker_rootfs_size_mib: int | None = None,
         environment: Optional[dict[str, Any]] = None,
         nginx_keepalive_requests: int = 10_000_000,
+        extra_graalhost_args: str = "",
     ):
         def both_graal_host_config_options_set(extra_graalhost_dir_mounts: Optional[List[str]], graalhost_config_file: str | None) -> bool:
             """
@@ -457,6 +461,7 @@ class LocalBinaryConfig(BinaryConfig):
         self._nginx_keepalive = nginx_keepalive
         self._nginx_keepalive_timeout = nginx_keepalive_timeout
         self._nginx_keepalive_requests = nginx_keepalive_requests
+        self._extra_graalhost_args = tuple(shlex.split(extra_graalhost_args))
         if both_graal_host_config_options_set(extra_graalhost_dir_mounts, graalhost_config_file):
             error(f"Cannot use both {GRAALHOST_CONFIG_FILE} and {EXTRA_GRAALHOST_DIR_MOUNTS} for one binary.")
         self._extra_graalhost_dir_mounts = extra_graalhost_dir_mounts
@@ -493,6 +498,10 @@ class LocalBinaryConfig(BinaryConfig):
     @property
     def nginx_keepalive_requests(self) -> int:
         return self._nginx_keepalive_requests
+
+    @property
+    def extra_graalhost_args(self) -> tuple[str, ...]:
+        return self._extra_graalhost_args
 
     @property
     def extra_graalhost_dir_mounts(self) -> Optional[List[str]]:
@@ -1711,6 +1720,7 @@ def get_binary(binary: dict[str, Any], app_deployment: str, env: Optional[dict[s
                        "nginx_keepalive": (get_opt(binary, "nginx_keepalive", cond=int, default=5, env=env)),
                        "nginx_keepalive_timeout": (get_opt(binary, "nginx_keepalive_timeout", str, default="5s", env=env)),
                        "nginx_keepalive_requests": (get_opt(binary, "nginx_keepalive_requests", cond=int, default=10_000_000, env=env)),
+                       EXTRA_GRAALHOST_ARGS: (extra_graalhost_args(binary, env, app_deployment)),
                        EXTRA_GRAALHOST_DIR_MOUNTS: (extra_graalhost_dir_mounts(binary, env, app_deployment)),
                        GRAALHOST_CONFIG_FILE : (graalhost_config_file(binary, env, app_deployment)),
                        FIRECRACKER_KERNEL_IMAGE: (firecracker_kernel_image(binary, env, app_deployment)),
@@ -1746,6 +1756,18 @@ def graalhost_config_file(binary: dict[str, Any], env: Optional[dict[str, Any]],
     value = get(binary, GRAALHOST_CONFIG_FILE, cond=str, env=env)
     if app_deployment != "nginx-tinyinit-graalhost" :
         error(f"Cannot use \"{GRAALHOST_CONFIG_FILE}\" when deployment is not \"nginx-tinyinit-graalhost\"")
+    return value
+
+def extra_graalhost_args(binary: dict[str, Any], env: Optional[dict[str, Any]], app_deployment: str) -> str:
+    """Return extra GraalHost arguments configured for a local application.
+
+    :param binary: application binary configuration
+    :param env: scenario environment used to resolve values
+    :param app_deployment: selected application deployment
+    """
+    value = get_opt(binary, EXTRA_GRAALHOST_ARGS, cond=str, default="", env=env)
+    if value and app_deployment != "nginx-tinyinit-graalhost":
+        error(f"Cannot use \"{EXTRA_GRAALHOST_ARGS}\" when deployment is not \"nginx-tinyinit-graalhost\"")
     return value
 
 def extra_graalhost_dir_mounts(binary: dict[str, Any], env: Optional[dict[str, Any]], _: str) -> list[str]:
@@ -2514,6 +2536,7 @@ def parse_scenario(
                     binary_method[FIRECRACKER_ROOTFS_SIZE_MIB],
                     binary_method["environment"],
                     binary_method["nginx_keepalive_requests"],
+                    binary_method[EXTRA_GRAALHOST_ARGS],
                 )
             elif "keg_id" in binary_method:
                 binary = RunningKegBinaryConfig(

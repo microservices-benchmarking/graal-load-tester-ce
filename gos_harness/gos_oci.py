@@ -93,7 +93,11 @@ class BaseApp:
         }
         if self.app_config.version:
             fields["app.version"] = self.app_config.version
-        if self.deployment == "nginx-tinyinit-firecracker":
+        if self.deployment == "nginx-tinyinit-graalhost":
+            version = _runtime_version("graalhost")
+            if version:
+                fields["extra.graalhost-version"] = version
+        elif self.deployment == "nginx-tinyinit-firecracker":
             version = _runtime_version("firecracker")
             if version:
                 fields["extra.firecracker-version"] = version
